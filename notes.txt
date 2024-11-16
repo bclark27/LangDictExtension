@@ -1,0 +1,5 @@
+chinese text splitting:
+    https://github.com/ad52825196/chinese-segmentation/blob/master/project%20B.py#L253
+    https://mandarinspot.com/annotate
+    https://melaniewalsh.github.io/Intro-Cultural-Analytics/05-Text-Analysis/Multilingual/Chinese/01-Preprocessing-Chinese.html
+    python nltk

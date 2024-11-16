@@ -1,0 +1,73 @@
+:root {
+    --memory-status-color-0: #ff000080;
+    --memory-status-color-1: #ff880080;
+    --memory-status-color-2: #7bff0060;
+    --memory-status-color-3: #00ffdd3b;
+    --memory-status-color-4: #00ffdd10;
+    --memory-status-underline: 2px;
+    --memory-status-corner: 4px;
+}
+
+#lang-parser-tooltip-popup {
+    background-color: #001310;
+    border: 2px solid #2d3f42;
+    color: #c7f1eb;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+
+span [lang-parser-memory-status="0"] {
+    text-decoration-line: underline;
+    text-decoration-thickness: var(--memory-status-underline);
+    text-decoration-color: var(--memory-status-color-0);
+}
+span [lang-parser-memory-status="0"]:hover {
+    border-radius: var(--memory-status-corner);
+    background-color: color-mix(in srgb, var(--memory-status-color-0) 25%, transparent);
+}
+
+
+span [lang-parser-memory-status="1"] {
+    text-decoration-line: underline;
+    text-decoration-thickness: var(--memory-status-underline);
+    text-decoration-color: var(--memory-status-color-1);
+}
+span [lang-parser-memory-status="1"]:hover {
+    border-radius: var(--memory-status-corner);
+    background-color: color-mix(in srgb, var(--memory-status-color-1) 25%, transparent);
+}
+
+
+span [lang-parser-memory-status="2"] {
+    text-decoration-line: underline;
+    text-decoration-thickness: var(--memory-status-underline);
+    text-decoration-color: var(--memory-status-color-2);
+}
+span [lang-parser-memory-status="2"]:hover {
+    border-radius: var(--memory-status-corner);
+    background-color: color-mix(in srgb, var(--memory-status-color-2) 25%, transparent);
+}
+
+
+span [lang-parser-memory-status="3"] {
+    text-decoration-line: underline;
+    text-decoration-thickness: var(--memory-status-underline);
+    text-decoration-color: var(--memory-status-color-3);
+}
+span [lang-parser-memory-status="3"]:hover {
+    border-radius: var(--memory-status-corner);
+    background-color: color-mix(in srgb, var(--memory-status-color-3) 25%, transparent);
+}
+
+
+
+span [lang-parser-memory-status="4"] {
+    text-decoration-line: underline;
+    text-decoration-thickness: var(--memory-status-underline);
+    text-decoration-color: var(--memory-status-color-4);
+}
+span [lang-parser-memory-status="4"]:hover {
+    border-radius: var(--memory-status-corner);
+    background-color: color-mix(in srgb, var(--memory-status-color-4) 25%, transparent);
+}
