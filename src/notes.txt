@@ -1,0 +1,13 @@
+chinese text splitting:
+    https://github.com/ad52825196/chinese-segmentation/blob/master/project%20B.py#L253
+    https://mandarinspot.com/annotate
+    https://melaniewalsh.github.io/Intro-Cultural-Analytics/05-Text-Analysis/Multilingual/Chinese/01-Preprocessing-Chinese.html
+    python nltk
+
+local files storage
+    https://www.npmjs.com/package/idb-file-storage?activeTab=readme
+    https://stackoverflow.com/questions/50353372/how-can-i-add-umd-so-i-can-use-my-module-in-the-browser-and-as-an-npm-module
+    https://github.com/fstanis/webextensions-webpack-boilerplate
+
+
+    babel-core babel-loader babel-minify-webpack-plugin babel-polyfill babel-preset-env clean-webpack-plugin extract-loader extricate-loader file-loader html-loader imports-loader interpolate-loader prop-loader raw-loader spawn-loader webextension-polyfill

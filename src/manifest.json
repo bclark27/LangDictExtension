@@ -1,0 +1,39 @@
+{
+    "manifest_version": 2,
+    "name": "LangDict",
+    "version": "1.0",
+    "description": "parses languages in the web browser",
+
+    "content_scripts": [
+        {
+            "matches": ["<all_urls>"],
+            "js": ["app.js"],
+            "css": ["style.css"]
+        }
+    ],
+
+    "background": {
+        "scripts": ["background.js"],
+        "persistent": false,
+        "type": "module"
+    },
+      
+
+    "permissions": [
+        "activeTab",
+        "scripting",
+        "identity",
+        "storage",
+        "downloads",
+        "tabs"
+    ],
+
+    "browser_action": {
+        "browser_style": true,
+        "default_icon": {
+
+        },
+        "default_title": "LangDict",
+        "default_popup": "popup.html" 
+    }
+}
