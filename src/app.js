@@ -162,7 +162,39 @@ class LangManager_kr extends LangManager
     }
 }
 
+class DataBase
+{
 
+    constructor ()
+    {
+        this.dbJSON = {};
+        this.isLoaded = false;
+        this.input = document.createElement('input');
+        this.input.type = 'file';
+        this.input.onchange = e => { 
+            console.log(e);
+            // getting a hold of the file reference
+            var file = e.target.files[0]; 
+        
+            console.log(file);
+        
+            // setting up the reader
+            var reader = new FileReader();
+            reader.readAsText(file,'UTF-8');
+        
+            // here we tell the reader what to do when it's done reading...
+            reader.onload = readerEvent => {
+                var content = readerEvent.target.result; // this is the content!
+                console.log( content );
+            }
+        }
+    }
+
+    loadDb(file)
+    {
+        this.input.click();
+    }
+}
 
 //////////////
 //  CONSTS  //
@@ -202,6 +234,8 @@ document.body.addEventListener("click", onBodyClicked);
 /////////////
 //  FUNCS  //
 /////////////
+
+
 
 function buildTooltipHTML(tokenInfo)
 {
@@ -465,7 +499,7 @@ function hideTooltip()
     tooltipRoot.style = 'display: none';
 }
 
-function mainParse(langId)
+async function mainParse(langId)
 {
     logger.log("setLanguage", "setting language to '" + langId + "'", LogType.msg);
 
@@ -512,5 +546,6 @@ function mainParse(langId)
         parent.replaceChild(spanGroup, node);
     }
 
-    
+    // let dataBase = new DataBase();
+    // dataBase.loadDb();
 }

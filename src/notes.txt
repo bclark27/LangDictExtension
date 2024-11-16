@@ -9,5 +9,9 @@ local files storage
     https://stackoverflow.com/questions/50353372/how-can-i-add-umd-so-i-can-use-my-module-in-the-browser-and-as-an-npm-module
     https://github.com/fstanis/webextensions-webpack-boilerplate
 
+    DONT USE WEBPACK its all stupid
+    just download the source and use that
 
-    babel-core babel-loader babel-minify-webpack-plugin babel-polyfill babel-preset-env clean-webpack-plugin extract-loader extricate-loader file-loader html-loader imports-loader interpolate-loader prop-loader raw-loader spawn-loader webextension-polyfill
+    if that dont work then just do open and save file buttons
+
+    https://stackoverflow.com/questions/2897619/using-html5-javascript-to-generate-and-save-a-file
