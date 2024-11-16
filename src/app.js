@@ -190,9 +190,18 @@ class DataBase
         }
     }
 
-    loadDb(file)
+    loadDb()
     {
         this.input.click();
+    }
+
+    exportToString()
+    {
+        if (!this.isLoaded)
+            return "";
+
+
+        // navigator.clipboard.writeText("kill this thing");
     }
 }
 
@@ -203,6 +212,10 @@ class DataBase
 const TOOLTIP_POPUP_ID = "lang-parser-tooltip-popup"
 const TOOLTIP_ROOT_ID = "lang-parser-tooltip-root"
 const LANG_PARSER_TOKEN_ID = 'lang-parser-token';
+const PARSE_CLICKED_ATT = 'parse-clicked';
+const LOAD_CLICKED_ATT = 'load-clicked';
+const EXPORT_CLICKED_ATT = 'export-clicked';
+const LOCAL_STORAGE_SELECTED_LANG_ID = "selected-language";
 
 const logger = new Logger();
 
@@ -210,16 +223,17 @@ const logger = new Logger();
 //  LISTENERS  //
 /////////////////
 
-const selectedLanguageId = "selected-language";
 browser.storage.onChanged.addListener((changes, area) => 
 {
-    if (area === 'local' && selectedLanguageId in changes)
+    if (area === 'local' && LOCAL_STORAGE_SELECTED_LANG_ID in changes)
     {
-        let langStr = changes[selectedLanguageId].newValue;
+        /*
+        let langStr = changes[LOCAL_STORAGE_SELECTED_LANG_ID].newValue;
         let langId = getLangIdFromString(langStr);
         if (langId == null)
-            return;
+        return;
         mainParse(langId, document);
+        */
     }
 });
 
@@ -227,15 +241,32 @@ browser.runtime.onMessage.addListener(onMessageHandler);
 function onMessageHandler(request, sender, sendResponse)
 {
     logger.log("onMessageHandler", request, LogType.msg);
-}
 
-document.body.addEventListener("click", onBodyClicked);
+    if (!request)
+        return;
+
+    if (request[PARSE_CLICKED_ATT] == true)
+    {
+        onParseButtonClicked();
+        return;
+    }
+
+    if (request[LOAD_CLICKED_ATT] == true)
+    {
+        onLoadButtonClicked();
+        return;
+    }
+
+    if (request[EXPORT_CLICKED_ATT] == true)
+    {
+        onExportButtonClicked();
+        return;
+    }
+}
 
 /////////////
 //  FUNCS  //
 /////////////
-
-
 
 function buildTooltipHTML(tokenInfo)
 {
@@ -499,6 +530,28 @@ function hideTooltip()
     tooltipRoot.style = 'display: none';
 }
 
+async function getCurrentLangOption()
+{
+    return (await browser.storage.local.get({[LOCAL_STORAGE_SELECTED_LANG_ID]: "kr"}))[LOCAL_STORAGE_SELECTED_LANG_ID];
+}
+
+async function onParseButtonClicked()
+{
+    const langId = await getCurrentLangOption();
+    logger.log('onParseButtonClicked', "parse clicked", LogType.msg);
+    mainParse(langId);
+}
+
+function onLoadButtonClicked()
+{
+
+}
+
+function onExportButtonClicked()
+{
+
+}
+
 async function mainParse(langId)
 {
     logger.log("setLanguage", "setting language to '" + langId + "'", LogType.msg);
@@ -546,6 +599,5 @@ async function mainParse(langId)
         parent.replaceChild(spanGroup, node);
     }
 
-    // let dataBase = new DataBase();
-    // dataBase.loadDb();
+    
 }

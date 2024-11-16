@@ -21,9 +21,10 @@
 
     "permissions": [
         "scripting",
-        "storage"
+        "storage",
+        "clipboardRead",
+        "clipboardWrite"
     ],
-
     "browser_action": {
         "browser_style": true,
         "default_icon": {

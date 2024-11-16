@@ -1,13 +1,4 @@
-/////////////
-//  TYPES  //
-/////////////
 
-const LangId = Object.freeze({
-    kr:         "kr",
-    zh_CN:      "zh_CN",
-    zh_HK:      "zh_HK",
-});
-
-/////////////////
-//  LISTENERS  //
-/////////////////
+const tmpFiles = await getFileStorage({name: "tmpFiles"});
+const file = await tmpFiles.createMutableFile("path/filename.txt");
+const fh = file.open("readwrite");
