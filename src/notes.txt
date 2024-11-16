@@ -15,3 +15,6 @@ local files storage
     if that dont work then just do open and save file buttons
 
     https://stackoverflow.com/questions/2897619/using-html5-javascript-to-generate-and-save-a-file
+
+    using only src????
+    https://github.com/mdn/webextensions-examples/blob/main/store-collected-images/webextension-plain/README.md

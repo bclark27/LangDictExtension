@@ -20,12 +20,8 @@
       
 
     "permissions": [
-        "activeTab",
         "scripting",
-        "identity",
-        "storage",
-        "downloads",
-        "tabs"
+        "storage"
     ],
 
     "browser_action": {
