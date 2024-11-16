@@ -264,6 +264,8 @@ function onMessageHandler(request, sender, sendResponse)
     }
 }
 
+document.body.addEventListener("click", onBodyClicked);
+
 /////////////
 //  FUNCS  //
 /////////////
