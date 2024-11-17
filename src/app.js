@@ -1,3 +1,8 @@
+/////////////
+//  DICTS  //
+/////////////
+
+
 
 /////////////
 //  TYPES  //
@@ -316,7 +321,7 @@ class DataBase
         this.input.click();
     }
 
-    exportToString()
+    exportToJSONString()
     {
         /*
         DB Format
@@ -344,7 +349,7 @@ class DataBase
         }
 
         */
-        logger.log('DataBase.exportToString', 'exporting current bd state to string', LogType.msg);
+        logger.log('DataBase.exportToJSONString', 'exporting current bd state to string', LogType.msg);
         return JSON.stringify(this.dbObj);
         
     }
@@ -845,7 +850,7 @@ function onLoadButtonClicked()
 
 function onExportButtonClicked()
 {
-    navigator.clipboard.writeText(db.exportToString());
+    navigator.clipboard.writeText(db.exportToJSONString());
 }
 
 function updateSpecificTokenHTML(tokenText, langId)
