@@ -20,8 +20,12 @@
       
 
     "permissions": [
+        "activeTab",
         "scripting",
+        "identity",
         "storage",
+        "downloads",
+        "tabs",
         "clipboardRead",
         "clipboardWrite"
     ],

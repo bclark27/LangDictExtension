@@ -16,18 +16,17 @@ const LOCAL_STORAGE_SELECTED_LANG_ID = "selected-language";
 //  LISTENERS  //
 /////////////////
 
-let languageSelect = document.getElementById("languageSelect");
+const languageSelect = document.getElementById("languageSelect");
 languageSelect.addEventListener('change', e => setLanguageSelect(e.target.value));
 
-let parseButton = document.getElementById("parseButton");
+const parseButton = document.getElementById("parseButton");
 parseButton.addEventListener('click', parseButtonClicked);
 
-let loadButton = document.getElementById("loadButton");
+const loadButton = document.getElementById("loadButton");
 loadButton.addEventListener('click', loadButtonClicked);
 
-let exportButton = document.getElementById("exportButton");
+const exportButton = document.getElementById("exportButton");
 exportButton.addEventListener('click', exportButtonClicked);
-
 
 /////////////
 //  FUNCS  //

@@ -19,11 +19,14 @@ class Logger
 {
     constructor ()
     {
-
+        this.restrictMessages = true;
     }
 
     log(caller, message, logType)
     {
+        if (this.restrictMessages && logType == LogType.msg)
+            return;
+        
         console.log(caller + " [ " + logType + " ]: " + message);
     }
 }
@@ -105,13 +108,16 @@ class LangManager
     {
         throw new Error("Not Implomented");
     }
-    
-    getTokenInfo(tokenText, langId)
-    {
-        throw new Error("Not Implomented");
-    }
 
-    setTokenInfo(tokenText, langId, json)
+    /*
+    should read from db and get all stuff about the token
+    MUST INCLUDE:
+        memoryStatus
+        notes
+    
+    if the token does not exist, a new entry in the database will be made
+    */
+    getAllTokenInfo(tokenText)
     {
         throw new Error("Not Implomented");
     }
@@ -136,6 +142,13 @@ class LangManager_kr extends LangManager
             const langId = chunksAreMatchs[i] ? LangId.kr : null;
             let token = new LangToken(textChunks[i], langId);
             token.tokenIsTargetLang = langId != null;
+            
+            if (token.tokenIsTargetLang)
+            {
+                const info = this.getAllTokenInfo(token.token);
+                token.memoryStatus = info.memoryStatus;
+            }
+
             tokens.push(token);
         }
 
@@ -147,18 +160,19 @@ class LangManager_kr extends LangManager
         return text != null && this.hangulRe.test(text);
     }
     
-    getTokenInfo(tokenText, langId)
+    getAllTokenInfo(tokenText)
     {
-        return {
-            tokenText: tokenText,
-            langId: langId,
-            memoryStatus: 0,
-        };
-    }
+        logger.log('getAllTokenInfo', 'LangManager ' + LangId.kr + ' getting info for ' + tokenText, LogType.msg);
+        db.assertLangExists(LangId.kr);
+        let info = db.readTokenInfo(tokenText, LangId.kr);
+        if (info)
+            return info;
 
-    setTokenInfo(tokenText, langId, tokenInfo)
-    {
-        throw new Error("Not Implomented");
+        
+        logger.log('getAllTokenInfo', 'db has no entry for ' + tokenText + ', adding new entry', LogType.msg);
+        info = generateDefaultTokenInfo();
+        db.writeTokenInfo(tokenText, LangId.kr, info);
+        return info;
     }
 }
 
@@ -167,8 +181,7 @@ class DataBase
 
     constructor ()
     {
-        this.dbJSON = {};
-        this.isLoaded = false;
+        this.__clearDb();
         this.input = document.createElement('input');
         this.input.type = 'file';
         this.input.onchange = e => { 
@@ -184,24 +197,217 @@ class DataBase
         
             // here we tell the reader what to do when it's done reading...
             reader.onload = readerEvent => {
-                var content = readerEvent.target.result; // this is the content!
-                console.log( content );
+                const parsedObj = JSON.parse(readerEvent.target.result); // this is the content!
+
+                console.log(parsedObj);
+                if (!parsedObj || !Object.hasOwn(parsedObj, 'userStats') || !Object.hasOwn(parsedObj, 'tokens'))
+                {
+                    logger.log('DataBase.onload', 'parsed file has incorrect format', LogType.err);
+                    return;
+                }
+
+                logger.log('DataBase.onload', 'loaded db file!', LogType.msg);
+                this.dbObj = parsedObj;
+                console.log( this.dbObj );
+                updateAllTokenHTML();
             }
         }
     }
 
+    __clearDb()
+    {
+        logger.log('DataBase.__clearDb', 'clearing db', LogType.msg);
+        this.dbObj = {
+            "userStats": { },
+            "tokens": { }
+        };
+    }
+
+    assertLangExists(langId)
+    {
+        const tokens = this.dbObj['tokens'];
+
+        if (!tokens[langId])
+        {
+            tokens[langId] = {};
+        }
+    }
+
+    readTokenInfo(token, langId)
+    {
+        logger.log('DataBase.readTokenInfo', 'reading info for (' + token + ', ' + langId + ')', LogType.msg);
+
+        const tokens = this.dbObj["tokens"];
+        if (!tokens)
+        {
+            logger.log('DataBase.readTokenInfo', 'no tokens in db', LogType.err);
+            return null;
+        }
+
+        const thisLangIdTokens = tokens[langId];
+        if (!thisLangIdTokens)
+        {
+            logger.log('DataBase.readTokenInfo', 'no tokens for ' + langId + ' in db', LogType.err);
+            return null;
+        }
+
+        const thisInfo = thisLangIdTokens[token];
+        if (!thisInfo)
+        {
+            logger.log('DataBase.readTokenInfo', 'no info for ' + token + ' in db', LogType.err);
+            return null;
+        }
+
+        if (!Object.hasOwn(thisInfo, 'memoryStatus') || !Object.hasOwn(thisInfo, 'notes'))
+        {
+            logger.log('DataBase.readTokenInfo', 'token ' + token + ' does not fit correct format', LogType.err);
+            console.log(thisInfo);
+            return null;
+        }
+
+        return thisInfo;
+    }
+
+    writeTokenInfo(token, langId, info)
+    {
+        logger.log('DataBase.writeTokenInfo', 'writing info for (' + token + ', ' + langId + ')', LogType.msg);
+
+        if (!info)
+        {
+            logger.log('DataBase.writeTokenInfo', 'no info provided for ' + token, LogType.err);
+            return;
+        }
+
+        const tokens = this.dbObj["tokens"];
+        if (!tokens)
+        {
+            logger.log('DataBase.writeTokenInfo', 'no tokens in db', LogType.err);
+            return;
+        }
+
+        this.assertLangExists(langId);
+        const thisLangIdTokens = tokens[langId];
+        thisLangIdTokens[token] = info;
+    }
+
     loadDb()
     {
+        logger.log('DataBase.loadDb', 'starting to load db...', LogType.msg);
         this.input.click();
     }
 
     exportToString()
     {
-        if (!this.isLoaded)
-            return "";
+        /*
+        DB Format
 
+        {
+            "userStats":
+            {
+                some user stats
+            },
+            "tokens":
+            {
+                "kr":
+                {
+                    "한글":
+                    {
+                        "memoryStatus": 3,
+                        "notes": "asdasd"
+                    },
+                    "안녕":
+                    {
+                        some notes about the token + memory status
+                    }
+                }
+            }
+        }
 
-        // navigator.clipboard.writeText("kill this thing");
+        */
+        logger.log('DataBase.exportToString', 'exporting current bd state to string', LogType.msg);
+        return JSON.stringify(this.dbObj);
+        
+    }
+}
+
+class TooltipState
+{
+    langId;
+    tokenText;
+
+    x;
+    y;
+    visible;
+    currentContent;
+
+    __buildTooltipHTML(token, langSpecificConfig)
+    {
+        return document.createTextNode(token.token);
+    }
+
+    pushLangTokenToTooltip(token, x, y)
+    {
+        logger.log('TooltipState.pushLangTokenToPopup', 'pushing token to tooltip', LogType.msg);
+        const langManager = getLangManager(token.langId);
+        const langSpecificContentConfig = langManager.getAllTokenInfo(token.token, token.langId);
+        const tooltipContent = this.__buildTooltipHTML(token, langSpecificContentConfig);
+        if (!tooltipContent)
+        {
+            logger.log('TooltipState.pushLangTokenToPopup', 'lang manager returned null content', LogType.err);
+            return;
+        }
+        logger.log('TooltipState.pushLangTokenToPopup', 'showing tooltip at x:' + x + ' y: ' + y, LogType.msg);
+        const tooltipPopup = getTooltipPopup();
+        tooltipPopup.style = 'position: absolute; left: ' + x + 'px; top: ' + y + 'px;';
+        logger.log('TooltipState.pushLangTokenToPopup', 'setting the contents of the tooltip', LogType.msg);
+        tooltipPopup.innerHTML = '';
+        tooltipPopup.appendChild(tooltipContent);
+        const tooltipRoot = getTooltipRoot();
+        tooltipRoot.style = 'height: 100%; width: 100%; z-index: 10000; position: absolute; top: 0px; left: 0px; display: block'
+        
+        this.langId = token.langId;
+        this.tokenText = token.token;
+        this.x = x;
+        this.y = y;
+        this.visible = true;
+        this.currentContent = tooltipContent;
+    }
+
+    extractInfoFromTooltip()
+    {
+        logger.log("TooltipState.extractInfoFromTooltip", "extracting info from tooltip", LogType.msg);
+        if (!this.langId || !this.tokenText)
+        {
+            logger.log("TooltipState.extractInfoFromTooltip", 'tooltip has not token or langId', LogType.err);
+            return;
+        }
+
+        const langManager = getLangManager(this.langId);
+        if (!langManager)
+        {
+            logger.log("TooltipState.extractInfoFromTooltip", "langId " + this.langId + ' is not supported', LogType.err);
+            return;
+        }
+
+        const info = langManager.getAllTokenInfo(this.tokenText);
+        info.memoryStatus = (info.memoryStatus + 1) % 5;
+        db.writeTokenInfo(this.tokenText, this.langId, info);
+        updateSpecificTokenHTML(this.tokenText, this.langId);
+    }
+
+    hide()
+    {
+        logger.log("TooltipState.hide", "hidding tooltip", LogType.msg);
+        const tooltipRoot = getTooltipRoot();
+        tooltipRoot.style = 'display: none';
+        const wasAlreadyInvis = this.visible == false;
+        this.visible = false;
+
+        if (!wasAlreadyInvis)
+        {
+            logger.log("TooltipState.hide", "saving to db changes in tooltip", LogType.msg);
+            this.extractInfoFromTooltip();
+        }
     }
 }
 
@@ -218,6 +424,9 @@ const EXPORT_CLICKED_ATT = 'export-clicked';
 const LOCAL_STORAGE_SELECTED_LANG_ID = "selected-language";
 
 const logger = new Logger();
+const db = new DataBase();
+const createdLangManagers = {};
+const tooltipState = new TooltipState();
 
 /////////////////
 //  LISTENERS  //
@@ -270,6 +479,14 @@ document.body.addEventListener("click", onBodyClicked);
 //  FUNCS  //
 /////////////
 
+function generateDefaultTokenInfo()
+{
+    return {
+        "memoryStatus": 0,
+        "notes": ""
+    }
+}
+
 function buildTooltipHTML(tokenInfo)
 {
     logger.log('buildTooltipHTML', 'building tooltip html with token info: ', LogType.msg);
@@ -294,7 +511,7 @@ function onBodyClicked(evt)
     const id = clickedElement.getAttribute('id');
     if (!id || id != TOOLTIP_POPUP_ID)
     {
-        hideTooltip();
+        tooltipState.hide();
     }
 }
 
@@ -304,11 +521,7 @@ function onLangParserTokenClicked(clickedTokenHTML, evt)
     const token = LangToken.htmlElementToToken(clickedTokenHTML);
     logger.log('onLangParserTokenClicked', 'token "' + token.token + '" was clicked', LogType.msg);
 
-    const langManager = createLangManager(token.langId);
-    const tokenInfo = langManager.getTokenInfo(token.token, token.langId);
-    const tooltipContent = buildTooltipHTML(tokenInfo);
-
-    showTooltip(tooltipContent, evt.pageX, evt.pageY + boundingRect.height);
+    tooltipState.pushLangTokenToTooltip(token, evt.pageX, evt.pageY + boundingRect.height);
 }
 
 function assertChildIsInParent(child, parent)
@@ -397,15 +610,24 @@ function chunkTextByRegex(text, re)
     return [chunks, chunksAreMatchs];
 }
 
-function createLangManager(langId)
+function getLangManager(langId)
 {
+    let manager = createdLangManagers[langId];
+
+    if (manager)
+        return manager;
+
     switch (langId)
     {
         case LangId.kr:
-            return new LangManager_kr();
+            manager = new LangManager_kr();
+            break;
         default:
             return null;
     }
+
+    createdLangManagers[langId] = manager;
+    return manager;
 }
 
 function getAllHTMLNodesWithText(doc)
@@ -448,7 +670,7 @@ function sortHTMLTextNodes(textNodes)
     return [newTextNodes, existingTokenNodes];
 }
 
-function tryUpdateTokenHTMLNode(tokenHTMLNode, langManager)
+function tryUpdateTokenHTMLNode(tokenHTMLNode)
 {
     const parent = tokenHTMLNode.parentNode;
     if (!assertChildIsInParent(tokenHTMLNode, parent))
@@ -457,12 +679,17 @@ function tryUpdateTokenHTMLNode(tokenHTMLNode, langManager)
     const token = LangToken.htmlElementToToken(tokenHTMLNode);
     if (!token)
         return;
-    
-    if (token.langId != langManager.langId)
-        return;
 
-    // do some updates here...
-    token.memoryStatus = (token.memoryStatus + 1) % 5;
+
+    const langManager = getLangManager(token.langId);
+    if (!langManager)
+    {
+        logger.log('tryUpdateTokenHTMLNode', 'lang ' + token.langId + ' is not supported', LogType.err);
+        return;
+    }
+
+    const info = langManager.getAllTokenInfo(token.token);
+    token.memoryStatus = info.memoryStatus;
     
     const newTokenHTMLNode = token.tokenToHTMLElement(document);
     parent.replaceChild(newTokenHTMLNode, tokenHTMLNode);
@@ -506,32 +733,6 @@ function getTooltipRoot()
     return document.getElementById(TOOLTIP_ROOT_ID);
 }
 
-function showTooltip(htmlContents, x, y)
-{
-    logger.log('showTooltip', 'showing tooltip at x:' + x + ' y: ' + y, LogType.msg);
-    const tooltipPopup = getTooltipPopup();
-    tooltipPopup.style = 'position: absolute; left: ' + x + 'px; top: ' + y + 'px;';
-    setTooltipContent(htmlContents);
-
-    const tooltipRoot = getTooltipRoot();
-    tooltipRoot.style = 'height: 100%; width: 100%; z-index: 10000; position: absolute; top: 0px; left: 0px; display: block'
-}
-
-function setTooltipContent(htmlContents)
-{
-    logger.log('setTooltipContent', 'setting the contents of the tooltip', LogType.msg);
-    const tooltipPopup = getTooltipPopup();
-    tooltipPopup.innerHTML = '';
-    tooltipPopup.appendChild(htmlContents);
-}
-
-function hideTooltip()
-{
-    logger.log("hideTooltip", "hidding tooltip", LogType.msg);
-    const tooltipRoot = getTooltipRoot();
-    tooltipRoot.style = 'display: none';
-}
-
 async function getCurrentLangOption()
 {
     return (await browser.storage.local.get({[LOCAL_STORAGE_SELECTED_LANG_ID]: "kr"}))[LOCAL_STORAGE_SELECTED_LANG_ID];
@@ -546,36 +747,79 @@ async function onParseButtonClicked()
 
 function onLoadButtonClicked()
 {
-
+    db.loadDb();
 }
 
 function onExportButtonClicked()
 {
+    navigator.clipboard.writeText(db.exportToString());
+}
 
+function updateSpecificTokenHTML(tokenText, langId)
+{
+    logger.log('updateSpecificTokenHTML', 'updateing all nodes of type (' + tokenText + ', ' + langId + ')', LogType.msg);
+    const langManager = getLangManager(langId);
+    if (!langManager)
+    {
+        logger.log('updateSpecificTokenHTML', 'lang ' + langId + ' is not supported', LogType.err);
+        return;
+    }
+
+    const textNodes = getAllHTMLNodesWithText(document);
+    const [newTextNodes, existingTokenNodes] = sortHTMLTextNodes(textNodes);
+    const needUpdateNodes = [];
+    for (const existingTokenNode of existingTokenNodes)
+    {
+        const token = LangToken.htmlElementToToken(existingTokenNode);
+        if (!token)
+            continue;
+
+        if (token.langId == langId && token.token == tokenText)
+        {
+            needUpdateNodes.push(existingTokenNode);
+        }
+    }
+
+    logger.log('updateSpecificTokenHTML', 'found ' + needUpdateNodes.length + ' html nodes to update for type (' + tokenText + ', ' + langId + ')', LogType.msg);
+    for (const needUpdateNode of needUpdateNodes)
+    {
+        tryUpdateTokenHTMLNode(needUpdateNode);
+    }
+}
+
+function updateAllTokenHTML()
+{
+    logger.log('updateAllTokenHTML', 'updateing full page, all tokens', LogType.msg);
+    const textNodes = getAllHTMLNodesWithText(document);
+    const [newTextNodes, existingTokenNodes] = sortHTMLTextNodes(textNodes);
+    for (const existingTokenNode of existingTokenNodes)
+    {
+        tryUpdateTokenHTMLNode(existingTokenNode);
+    }
 }
 
 async function mainParse(langId)
 {
-    logger.log("setLanguage", "setting language to '" + langId + "'", LogType.msg);
+    logger.log("mainParse", "setting language to '" + langId + "'", LogType.msg);
 
     // get the correct langManager
-    const langManager = createLangManager(langId);
+    const langManager = getLangManager(langId);
 
     if (langManager == null)
     {
-        logger.log("setLanguage", "the language '" + langId + "' is not yet supported", LogType.msg);
+        logger.log("mainParse", "the language '" + langId + "' is not yet supported", LogType.msg);
         return;
     }
     
     // get all the text nodes
     const textNodes = getAllHTMLNodesWithText(document);
-    logger.log("setLanguage", "got " + textNodes.length + " text nodes from document", LogType.msg);
+    logger.log("mainParse", "got " + textNodes.length + " text nodes from document", LogType.msg);
 
     // take out the existing nodes and try to update them
     const [newTextNodes, existingTokenNodes] = sortHTMLTextNodes(textNodes);
     for (const existingTokenNode of existingTokenNodes)
     {
-        tryUpdateTokenHTMLNode(existingTokenNode, langManager);
+        tryUpdateTokenHTMLNode(existingTokenNode);
     }
 
 
@@ -587,7 +831,7 @@ async function mainParse(langId)
             fitleredTextNodes.push(node);
     }
 
-    logger.log("setLanguage", "got " + fitleredTextNodes.length + " text nodes with taget lang", LogType.msg);
+    logger.log("mainParse", "got " + fitleredTextNodes.length + " text nodes with taget lang", LogType.msg);
 
     for (const node of fitleredTextNodes)
     {
@@ -601,5 +845,4 @@ async function mainParse(langId)
         parent.replaceChild(spanGroup, node);
     }
 
-    
 }
