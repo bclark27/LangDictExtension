@@ -27,6 +27,7 @@
         "downloads",
         "tabs",
         "clipboardRead",
+        "*://dictionary.writtenchinese.com/*",
         "clipboardWrite"
     ],
     "browser_action": {

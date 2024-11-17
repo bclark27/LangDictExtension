@@ -79372,6 +79372,25 @@ function updateAllTokenHTML()
     }
 }
 
+async function fetchHTML(url)
+{
+    return await fetch(url)
+    .then(response => {
+        // When the page is loaded convert it to text
+        return response.text()
+    })
+    .then(html => {
+        // Initialize the DOM parser
+        const parser = new DOMParser()
+
+        // Parse the text
+        return parser.parseFromString(html, "text/html");
+    })
+    .catch(error => {
+        console.error('Failed to fetch page: ', error)
+    })
+}
+
 async function mainParse(langId)
 {
     logger.log("mainParse", "setting language to '" + langId + "'", LogType.msg);
@@ -79419,4 +79438,5 @@ async function mainParse(langId)
         parent.replaceChild(spanGroup, node);
     }
 
+    
 }

@@ -4,20 +4,5 @@ chinese text splitting:
     https://melaniewalsh.github.io/Intro-Cultural-Analytics/05-Text-Analysis/Multilingual/Chinese/01-Preprocessing-Chinese.html
     python nltk
 
-local files storage
-    https://www.npmjs.com/package/idb-file-storage?activeTab=readme
-    https://stackoverflow.com/questions/50353372/how-can-i-add-umd-so-i-can-use-my-module-in-the-browser-and-as-an-npm-module
-    https://github.com/fstanis/webextensions-webpack-boilerplate
-
-    DONT USE WEBPACK its all stupid
-    just download the source and use that
-
-    if that dont work then just do open and save file buttons
-
-    https://stackoverflow.com/questions/2897619/using-html5-javascript-to-generate-and-save-a-file
-
-    using only src????
-    https://github.com/mdn/webextensions-examples/blob/main/store-collected-images/webextension-plain/README.md
-    https://github.com/mdn/dom-examples/blob/main/to-do-notifications/scripts/todo.js
-
-
+mandarin dictionary def
+    https://dictionary.writtenchinese.com/#sk=%E7%89%B9%E8%89%B2&svt=pinyin
