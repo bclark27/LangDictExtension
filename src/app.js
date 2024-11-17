@@ -26,7 +26,7 @@ class Logger
     {
         if (this.restrictMessages && logType == LogType.msg)
             return;
-        
+
         console.log(caller + " [ " + logType + " ]: " + message);
     }
 }
@@ -121,6 +121,16 @@ class LangManager
     {
         throw new Error("Not Implomented");
     }
+
+    createExtraTooltipHTML(tokenText)
+    {
+        throw new Error("Not Implomented");
+    }
+
+    parseExtraInfoFromExtraHTML(extraHTML)
+    {
+        throw new Error("Not Implomented");
+    }
 }
 
 class LangManager_kr extends LangManager
@@ -174,6 +184,16 @@ class LangManager_kr extends LangManager
         db.writeTokenInfo(tokenText, LangId.kr, info);
         return info;
     }
+
+    createExtraTooltipHTML(tokenText)
+    {
+        return "";
+    }
+
+    parseExtraInfoFromExtraHTML(extraHTML)
+    {
+        return {};
+    }
 }
 
 class DataBase
@@ -225,7 +245,13 @@ class DataBase
 
     assertLangExists(langId)
     {
-        const tokens = this.dbObj['tokens'];
+        let tokens = this.dbObj['tokens'];
+
+        if (!tokens)
+        {
+            this.dbObj['tokens'] = {};
+            let tokens = this.dbObj['tokens'];
+        }
 
         if (!tokens[langId])
         {
@@ -278,14 +304,8 @@ class DataBase
             return;
         }
 
-        const tokens = this.dbObj["tokens"];
-        if (!tokens)
-        {
-            logger.log('DataBase.writeTokenInfo', 'no tokens in db', LogType.err);
-            return;
-        }
-
         this.assertLangExists(langId);
+        const tokens = this.dbObj['tokens'];
         const thisLangIdTokens = tokens[langId];
         thisLangIdTokens[token] = info;
     }
@@ -340,17 +360,67 @@ class TooltipState
     visible;
     currentContent;
 
-    __buildTooltipHTML(token, langSpecificConfig)
+    __buildTooltipHTML(token, info, extraHTML)
     {
-        return document.createTextNode(token.token);
+        if (!extraHTML)
+            extraHTML = "";
+
+
+        let memorySelectHTML = `<select id='${MEMORY_ID}'>`;
+        for (let i = 0; i < 5; i++)
+        {
+            if (i == info.memoryStatus)
+            {
+                memorySelectHTML += `<option value="${i}" selected>${i}</option>`;
+            }
+            else
+            {
+                memorySelectHTML += `<option value="${i}">${i}</option>`;
+            }
+        }
+        memorySelectHTML += '</select>';
+
+        const basicLayout = `
+        <!DOCTYPE html>
+        <html>
+            <title>HTML Tutorial</title>
+            <body>
+                
+                    <div id='lang-parser-tooltip-header'>
+                        <div id='lang-parser-tooltip-title'>
+                            <b>
+                                <p>${token.token}</p>
+                            </b>
+                            <p> : (${token.langId})</p>
+                        </div>
+                        <div id='lang-parser-tooltip-title'>
+                            <p>Memory: </p>
+                            ${memorySelectHTML}
+                        </div>
+                    </div>
+                
+                <hr>
+                <p>Notes</p>
+                <input id='${NOTES_ID}' value='${info.notes}'></input>
+                <hr>
+                <div id='${EXTRA_HTML_ID}'>
+                    ${extraHTML}
+                </div>
+            </body>
+        </html> 
+        `;
+        const contentRoot = document.createElement('div');
+        contentRoot.innerHTML = basicLayout;
+        return contentRoot;
     }
 
     pushLangTokenToTooltip(token, x, y)
     {
         logger.log('TooltipState.pushLangTokenToPopup', 'pushing token to tooltip', LogType.msg);
         const langManager = getLangManager(token.langId);
-        const langSpecificContentConfig = langManager.getAllTokenInfo(token.token, token.langId);
-        const tooltipContent = this.__buildTooltipHTML(token, langSpecificContentConfig);
+        const info = langManager.getAllTokenInfo(token.token);
+        const extraHTML = langManager.createExtraTooltipHTML(token.token);
+        const tooltipContent = this.__buildTooltipHTML(token, info, extraHTML);
         if (!tooltipContent)
         {
             logger.log('TooltipState.pushLangTokenToPopup', 'lang manager returned null content', LogType.err);
@@ -389,8 +459,25 @@ class TooltipState
             return;
         }
 
-        const info = langManager.getAllTokenInfo(this.tokenText);
-        info.memoryStatus = (info.memoryStatus + 1) % 5;
+        const extraHTML = document.getElementById(EXTRA_HTML_ID).innerHTML;
+        let info = langManager.parseExtraInfoFromExtraHTML(extraHTML);
+        if (!info)
+        info = {};
+        
+        const memorySelect = document.getElementById(MEMORY_ID);
+        info['memoryStatus'] = 0;
+        if (memorySelect)
+        {
+            info['memoryStatus'] = memorySelect.value;
+        }
+
+        const notesInput = document.getElementById(NOTES_ID);
+        info['notes'] = '';
+        if (notesInput)
+        {
+            info['notes'] = notesInput.value;
+        }
+
         db.writeTokenInfo(this.tokenText, this.langId, info);
         updateSpecificTokenHTML(this.tokenText, this.langId);
     }
@@ -422,6 +509,9 @@ const PARSE_CLICKED_ATT = 'parse-clicked';
 const LOAD_CLICKED_ATT = 'load-clicked';
 const EXPORT_CLICKED_ATT = 'export-clicked';
 const LOCAL_STORAGE_SELECTED_LANG_ID = "selected-language";
+const NOTES_ID = 'lang-parser-tooltip-notes'
+const EXTRA_HTML_ID = 'extra-lang-parser-tooltip-html'
+const MEMORY_ID = 'lang-parser-token-memory';
 
 const logger = new Logger();
 const db = new DataBase();
@@ -507,6 +597,9 @@ function onBodyClicked(evt)
         onLangParserTokenClicked(clickedElement, evt);
         return;
     }
+
+    if (getTooltipPopup().contains(clickedElement))
+        return;
 
     const id = clickedElement.getAttribute('id');
     if (!id || id != TOOLTIP_POPUP_ID)

@@ -6,16 +6,32 @@
     --memory-status-color-4: #00ffdd10;
     --memory-status-underline: 2px;
     --memory-status-corner: 4px;
+    --text-color1: #c7f1eb;
 }
 
 #lang-parser-tooltip-popup {
     background-color: #001310;
     border: 2px solid #2d3f42;
-    color: #c7f1eb;
+    color: var(--text-color1);
     border-radius: 8px;
     padding: 10px;
+    min-width: 300px;
 }
 
+#lang-parser-tooltip-header {
+    display: flex;
+    justify-content: space-between;
+}
+
+#lang-parser-tooltip-notes {
+    background-color : #172c29;
+    color: var(--text-color1);
+    border: 0px;
+}
+
+#lang-parser-tooltip-title {
+    display: flex;
+}
 
 span [lang-parser-memory-status="0"] {
     text-decoration-line: underline;
