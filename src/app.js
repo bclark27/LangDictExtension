@@ -78456,7 +78456,7 @@ class LangManager
         throw new Error("Not Implomented");
     }
 
-    parseExtraInfoFromExtraHTML(extraHTML)
+    saveInfoFromTooltip(tokenText, standardInfo, extraHTML)
     {
         throw new Error("Not Implomented");
     }
@@ -78522,9 +78522,10 @@ class LangManager_kr extends LangManager
         return "";
     }
 
-    parseExtraInfoFromExtraHTML(extraHTML)
+    saveInfoFromTooltip(tokenText, standardInfo, extraHTML)
     {
-        return {};
+        const prevInfo = this.getAllTokenInfo(tokenText);
+        db.writeTokenInfo(tokenText, LangId.kr, standardInfo);
     }
 }
 
@@ -78532,10 +78533,25 @@ class LangManager_zh_CN extends LangManager
 {
     cnRe = /[\u4E00-\u9FCC\u3400-\u4DB5\uFA0E\uFA0F\uFA11\uFA13\uFA14\uFA1F\uFA21\uFA23\uFA24\uFA27-\uFA29]|[\ud840-\ud868][\udc00-\udfff]|\ud869[\udc00-\uded6\udf00-\udfff]|[\ud86a-\ud86c][\udc00-\udfff]|\ud86d[\udc00-\udf34\udf40-\udfff]|\ud86e[\udc00-\udc1d]/gm
 
-    static __parseCnSentanceIntoWords(cnText)
+    static __getMandarinPinyin(cnText)
     {
-        // start from the right, and search for the longest matches
-        return [cnText];
+        let pinyin = '';
+
+        for (let cnChar of cnText)
+        {
+            let p = CN_PINYIN[cnChar];
+            if (!p)
+                p = '-';
+
+            if (p.includes(','))
+            {
+                p = p.replace(/,/g, '(') + ')';
+            }
+
+            pinyin += ' ' + p;
+        }
+
+        return pinyin.substring(1);
     }
 
     tokenizeText(text)
@@ -78596,6 +78612,7 @@ class LangManager_zh_CN extends LangManager
         info = generateDefaultTokenInfo();
 
         // add extra info tags
+        info['pinyin'] = LangManager_zh_CN.__getMandarinPinyin(tokenText);
 
         db.writeTokenInfo(tokenText, LangId.zh_CN, info);
         return info;
@@ -78603,12 +78620,19 @@ class LangManager_zh_CN extends LangManager
 
     createExtraTooltipHTML(tokenText)
     {
-        return "";
+        const info = this.getAllTokenInfo(tokenText);
+        return `
+        <div>
+            <p>Pinyin: ${info['pinyin']}</p>
+        </div>
+        `;
     }
 
-    parseExtraInfoFromExtraHTML(extraHTML)
+    saveInfoFromTooltip(tokenText, standardInfo, extraHTML)
     {
-        return {};
+        const prevInfo = this.getAllTokenInfo(tokenText);
+        standardInfo['pinyin'] = prevInfo['pinyin'];
+        db.writeTokenInfo(tokenText, LangId.zh_CN, standardInfo);
     }
 }
 
@@ -78876,25 +78900,25 @@ class TooltipState
         }
 
         const extraHTML = document.getElementById(EXTRA_HTML_ID).innerHTML;
-        let info = langManager.parseExtraInfoFromExtraHTML(extraHTML);
-        if (!info)
-        info = {};
+        let standardInfo = {};
         
         const memorySelect = document.getElementById(MEMORY_ID);
-        info['memoryStatus'] = 0;
+        standardInfo['memoryStatus'] = 0;
         if (memorySelect)
         {
-            info['memoryStatus'] = memorySelect.value;
+            standardInfo['memoryStatus'] = memorySelect.value;
         }
 
         const notesInput = document.getElementById(NOTES_ID);
-        info['notes'] = '';
+        standardInfo['notes'] = '';
         if (notesInput)
         {
-            info['notes'] = notesInput.value;
+            standardInfo['notes'] = notesInput.value;
         }
 
-        db.writeTokenInfo(this.tokenText, this.langId, info);
+        langManager.saveInfoFromTooltip(this.tokenText, standardInfo, extraHTML);
+
+        //db.writeTokenInfo(this.tokenText, this.langId, info);
         updateSpecificTokenHTML(this.tokenText, this.langId);
     }
 
