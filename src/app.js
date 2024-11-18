@@ -78451,7 +78451,7 @@ class LangManager
         throw new Error("Not Implomented");
     }
 
-    createExtraTooltipHTML(tokenText)
+    async createExtraTooltipHTML(tokenText)
     {
         throw new Error("Not Implomented");
     }
@@ -78517,7 +78517,7 @@ class LangManager_kr extends LangManager
         return info;
     }
 
-    createExtraTooltipHTML(tokenText)
+    async createExtraTooltipHTML(tokenText)
     {
         return "";
     }
@@ -78525,7 +78525,9 @@ class LangManager_kr extends LangManager
     saveInfoFromTooltip(tokenText, standardInfo, extraHTML)
     {
         const prevInfo = this.getAllTokenInfo(tokenText);
-        db.writeTokenInfo(tokenText, LangId.kr, standardInfo);
+        prevInfo['memoryStatus'] = standardInfo['memoryStatus'];
+        prevInfo['notes'] = standardInfo['notes'];
+        db.writeTokenInfo(tokenText, LangId.kr, prevInfo);
     }
 }
 
@@ -78618,12 +78620,47 @@ class LangManager_zh_CN extends LangManager
         return info;
     }
 
-    createExtraTooltipHTML(tokenText)
+    static async __getCharDefFromWeb(tokenText)
     {
-        const info = this.getAllTokenInfo(tokenText);
+        let x = encodeURI(`https://chinese.yabla.com/chinese-english-pinyin-dictionary.php?define=${tokenText}`);
+        console.log(x);
+        let dictDoc = await fetchHTML(x);
+        if (!dictDoc)
+            return null;
+
+        const eles = dictDoc.getElementsByClassName("meaning");
+        if (!eles || eles.length == 0)
+            return null;
+        console.log(eles);
+        return eles[0].innerText;
+    }
+
+    static async __fillOnClickAttributes(tokenText, currentInfo)
+    {
+        let writeToDb = false;
+        if (!currentInfo['def'])
+        {
+            writeToDb = true;
+            currentInfo['def'] = await LangManager_zh_CN.__getCharDefFromWeb(tokenText);
+        }
+
+        if (writeToDb)
+        {
+            db.writeTokenInfo(tokenText, LangId.zh_CN, currentInfo);
+        }
+
+        return currentInfo;
+    }
+
+    async createExtraTooltipHTML(tokenText)
+    {
+        let info = this.getAllTokenInfo(tokenText);
+        info = await LangManager_zh_CN.__fillOnClickAttributes(tokenText, info);
+
         return `
         <div>
             <p>Pinyin: ${info['pinyin']}</p>
+            <p>Definition: ${info['def']}</p>
         </div>
         `;
     }
@@ -78631,8 +78668,9 @@ class LangManager_zh_CN extends LangManager
     saveInfoFromTooltip(tokenText, standardInfo, extraHTML)
     {
         const prevInfo = this.getAllTokenInfo(tokenText);
-        standardInfo['pinyin'] = prevInfo['pinyin'];
-        db.writeTokenInfo(tokenText, LangId.zh_CN, standardInfo);
+        prevInfo['memoryStatus'] = standardInfo['memoryStatus'];
+        prevInfo['notes'] = standardInfo['notes'];
+        db.writeTokenInfo(tokenText, LangId.zh_CN, prevInfo);
     }
 }
 
@@ -78854,12 +78892,12 @@ class TooltipState
         return contentRoot;
     }
 
-    pushLangTokenToTooltip(token, x, y)
+    async pushLangTokenToTooltip(token, x, y)
     {
         logger.log('TooltipState.pushLangTokenToPopup', 'pushing token to tooltip', LogType.msg);
         const langManager = getLangManager(token.langId);
         const info = langManager.getAllTokenInfo(token.token);
-        const extraHTML = langManager.createExtraTooltipHTML(token.token);
+        const extraHTML = await langManager.createExtraTooltipHTML(token.token);
         const tooltipContent = this.__buildTooltipHTML(token, info, extraHTML);
         if (!tooltipContent)
         {
@@ -79377,17 +79415,18 @@ async function fetchHTML(url)
     return await fetch(url)
     .then(response => {
         // When the page is loaded convert it to text
-        return response.text()
+        return response.text();
     })
     .then(html => {
         // Initialize the DOM parser
-        const parser = new DOMParser()
+        const parser = new DOMParser();
 
         // Parse the text
+        console.log(html);
         return parser.parseFromString(html, "text/html");
     })
     .catch(error => {
-        console.error('Failed to fetch page: ', error)
+        console.error('Failed to fetch page: ', error);
     })
 }
 
@@ -79437,6 +79476,4 @@ async function mainParse(langId)
         
         parent.replaceChild(spanGroup, node);
     }
-
-    
 }

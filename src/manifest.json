@@ -28,6 +28,7 @@
         "tabs",
         "clipboardRead",
         "*://dictionary.writtenchinese.com/*",
+        "*://chinese.yabla.com/*",
         "clipboardWrite"
     ],
     "browser_action": {
