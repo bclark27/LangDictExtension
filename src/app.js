@@ -78547,7 +78547,7 @@ class LangManager_zh_CN extends LangManager
 
             if (p.includes(','))
             {
-                p = p.replace(/,/g, '(') + ')';
+                p = p.replace(',', '(') + ')';
             }
 
             pinyin += ' ' + p;
