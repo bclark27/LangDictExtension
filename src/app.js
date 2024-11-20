@@ -191057,10 +191057,88 @@ class LangManager_kr extends LangManager
         db.writeTokenInfo(tokenText, LangId.kr, info);
         return info;
     }
+    
+    static async __getDefFromWeb(tokenText)
+    {
+        console.log('ASDASDASDASDASDASDASDASD');
+        let url = encodeURI(`https://en.dict.naver.com/#/search?query=${tokenText}`);
+        let dictDoc = await fetchHTML(url);
+        if (!dictDoc)
+            return null;
+
+        
+        const rows = dictDoc.getElementsByClassName("row ");
+        console.log(rows);
+        if (!rows || rows.length == 0)
+            return null;
+
+        const firstRow = rows[0];
+        let meanList = null;
+        let meanListMulti = null;
+        for (const child of firstRow.childNodes)
+        {
+            if (child.getAttribute('class') == 'mean_list ')
+            {
+                meanList = child;
+            }
+            if (child.getAttribute('class') == 'mean_list multi')
+            {
+                meanListMulti = child;
+            }
+        }
+
+        console.log(meanList);
+        if (meanList)
+        {
+            const mean = meanList.childNodes[0].childNodes[0];
+            if (mean.childNodes.length == 0)
+                return mean.innerText;
+            let def = '';
+            for (const child of mean)
+            {
+                if (child.nodeType===document.TEXT_NODE)
+                {
+                    def += child.nodeValue;
+                    continue;
+                }
+
+                def += child.innerText;
+            }
+            return def;
+        }
+
+        return 'asd';
+    }
+
+    static async __fillOnClickAttributes(tokenText, currentInfo)
+    {
+        let writeToDb = false;
+        if (!currentInfo['def'])
+        {
+            writeToDb = true;
+            currentInfo['def'] = await LangManager_kr.__getDefFromWeb(tokenText);
+        }
+
+        if (writeToDb)
+        {
+            db.writeTokenInfo(tokenText, LangId.kr, currentInfo);
+        }
+
+        return currentInfo;
+    }
 
     async createExtraTooltipHTML(tokenText)
     {
-        return "";
+        let info = this.getAllTokenInfo(tokenText);
+        info = await LangManager_kr.__fillOnClickAttributes(tokenText, info);
+        const link = `https://en.dict.naver.com/#/search?query=${tokenText}`
+
+        return `
+        <div>
+            <p>Definition: ${info['def']}</p>
+            <a href="${link}" target='_blank'>Online Dictionary</a>
+        </div>
+        `;
     }
 
     saveInfoFromTooltip(tokenText, standardInfo, extraHTML)
@@ -191162,7 +191240,6 @@ class LangManager_zh_CN extends LangManager
     static async __getCharDefFromWeb(tokenText)
     {
         let x = encodeURI(`https://chinese.yabla.com/chinese-english-pinyin-dictionary.php?define=${tokenText}`);
-        console.log(x);
         let dictDoc = await fetchHTML(x);
         if (!dictDoc)
             return null;
@@ -191195,11 +191272,13 @@ class LangManager_zh_CN extends LangManager
     {
         let info = this.getAllTokenInfo(tokenText);
         info = await LangManager_zh_CN.__fillOnClickAttributes(tokenText, info);
+        const link = `https://en.dict.naver.com/#/search?query=${tokenText}`;
 
         return `
         <div>
             <p>Pinyin: ${info['pinyin']}</p>
             <p>Definition: ${info['def']}</p>
+            <a href="${link}" target='_blank'>Online Dictionary</a>
         </div>
         `;
     }
@@ -191300,20 +191379,43 @@ class LangManager_zh_HK extends LangManager
 
     static async __getCharDefFromWeb(tokenText)
     {
-        return 'none yet';
-        /*
-        let x = encodeURI(`https://chinese.yabla.com/chinese-english-pinyin-dictionary.php?define=${tokenText}`);
-        console.log(x);
-        let dictDoc = await fetchHTML(x);
+        let url = encodeURI(`https://cantonese.org/search.php?q=${tokenText}`);
+        let dictDoc = await fetchHTML(url);
         if (!dictDoc)
             return null;
-
-        const eles = dictDoc.getElementsByClassName("meaning");
+        const eles = dictDoc.getElementsByClassName("result");
         if (!eles || eles.length == 0)
-        return null;
-    console.log(eles);
-    return eles[0].innerText;
-    */
+            return null;
+
+        const firstResultHTML = eles[0];
+
+        // scan the children for class='defnlist'
+
+        let defnlist = null;
+        let resultbody = null;
+        for (const child of firstResultHTML.childNodes)
+        {
+            if (child.getAttribute('class') == 'defnlist')
+            {
+                defnlist = child;
+            }
+            if (child.getAttribute('class') == 'resultbody')
+            {
+                resultbody = child;
+            }
+        }
+
+        const hasSimpleDef = resultbody != null && resultbody.innerHTML;
+        if (hasSimpleDef)
+            return resultbody.innerHTML;
+
+        let defs = ''
+        for (const child of defnlist.childNodes)
+        {
+            defs += (defs == '' ? '' : ', ') + child.innerText;
+        }
+
+        return defs;
     }
 
     static async __fillOnClickAttributes(tokenText, currentInfo)
@@ -191337,11 +191439,13 @@ class LangManager_zh_HK extends LangManager
     {
         let info = this.getAllTokenInfo(tokenText);
         info = await LangManager_zh_HK.__fillOnClickAttributes(tokenText, info);
+        const link = `https://cantonese.org/search.php?q=${tokenText}`;
 
         return `
         <div>
             <p>Jyutping: ${info['jyutping']}</p>
             <p>Definition: ${info['def']}</p>
+            <a href="${link}" target='_blank'>Online Dictionary</a>
         </div>
         `;
     }
@@ -192133,7 +192237,6 @@ async function fetchHTML(url)
         const parser = new DOMParser();
 
         // Parse the text
-        console.log(html);
         return parser.parseFromString(html, "text/html");
     })
     .catch(error => {

@@ -27,8 +27,9 @@
         "downloads",
         "tabs",
         "clipboardRead",
-        "*://dictionary.writtenchinese.com/*",
         "*://chinese.yabla.com/*",
+        "*://cantonese.org/*",
+        "*://en.dict.naver.com/*",
         "clipboardWrite"
     ],
     "browser_action": {
