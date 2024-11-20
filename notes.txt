@@ -6,3 +6,11 @@ chinese text splitting:
 
 mandarin dictionary def
     https://dictionary.writtenchinese.com/#sk=%E7%89%B9%E8%89%B2&svt=pinyin
+
+
+cantonese lang corpus
+    https://github.com/jacksonllee/pycantonese/blob/main/src/pycantonese/data/hkcancor/README.md
+    https://github.com/fcbond/hkcancor
+
+    Lic:
+        K. K. Luke and May L.Y. Wong (2015) The Hong Kong Cantonese Corpus: Design and Uses. Journal of Chinese Linguistics (to appear).
