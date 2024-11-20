@@ -191074,8 +191074,6 @@ class LangManager_kr extends LangManager
 
 class LangManager_zh_CN extends LangManager
 {
-    cnRe = /[\u4E00-\u9FCC\u3400-\u4DB5\uFA0E\uFA0F\uFA11\uFA13\uFA14\uFA1F\uFA21\uFA23\uFA24\uFA27-\uFA29]|[\ud840-\ud868][\udc00-\udfff]|\ud869[\udc00-\uded6\udf00-\udfff]|[\ud86a-\ud86c][\udc00-\udfff]|\ud86d[\udc00-\udf34\udf40-\udfff]|\ud86e[\udc00-\udc1d]/gm
-
     static __getMandarinPinyin(cnText)
     {
         let pinyin = '';
@@ -191099,7 +191097,7 @@ class LangManager_zh_CN extends LangManager
 
     tokenizeText(text)
     {
-        let [textChunks, chunksAreMatchs] = chunkTextByRegex(text, this.cnRe);
+        let [textChunks, chunksAreMatchs] = chunkTextByRegex(text, cnRe);
         let tokens = [];
         for (let i = 0; i < textChunks.length; i++)
         {
@@ -191131,7 +191129,7 @@ class LangManager_zh_CN extends LangManager
 
     textContainsTargetLang(text)
     {
-        return text != null && this.cnRe.test(text);
+        return text != null && cnRe.test(text);
     }
 
     /*
@@ -191212,6 +191210,148 @@ class LangManager_zh_CN extends LangManager
         prevInfo['memoryStatus'] = standardInfo['memoryStatus'];
         prevInfo['notes'] = standardInfo['notes'];
         db.writeTokenInfo(tokenText, LangId.zh_CN, prevInfo);
+    }
+}
+
+class LangManager_zh_HK extends LangManager
+{
+    static __getCantoJyutping(cnText)
+    {
+        let jyutping = '';
+
+        for (let cnChar of cnText)
+        {
+            if (cnChar in CANTO_JYUTPING)
+            {
+                jyutping += ' ' + CANTO_JYUTPING[cnChar];
+            }
+            else
+            {
+                jyutping += ' - ';
+            }
+        }
+
+        return jyutping.substring(1);
+    }
+
+    tokenizeText(text)
+    {
+        let [textChunks, chunksAreMatchs] = chunkTextByRegex(text, cnRe);
+        let tokens = [];
+        for (let i = 0; i < textChunks.length; i++)
+        {
+            const langId = chunksAreMatchs[i] ? LangId.zh_HK : null;
+            // if this token is not cn, pass the whole thing as not target lang
+            if (langId == null)
+            {
+                let notTargetLangToken = new LangToken(textChunks[i], null);
+                notTargetLangToken.tokenIsTargetLang = false;
+                tokens.push(notTargetLangToken);
+                continue;
+            }
+
+            const thisCnStr = textChunks[i];
+            const cnWords = parseCnSentanceIntoWords(thisCnStr, CANTO_DICT);
+
+            for (const cnWord of cnWords)
+            {
+                const cnWordToken = new LangToken(cnWord, LangId.zh_HK);
+                cnWordToken.tokenIsTargetLang = true;
+                const info = this.getAllTokenInfo(cnWord);
+                cnWordToken.memoryStatus = info.memoryStatus;
+                tokens.push(cnWordToken);
+            }
+        }
+
+        return tokens;
+    }
+
+    textContainsTargetLang(text)
+    {
+        return text != null && cnRe.test(text);
+    }
+
+    /*
+    should read from db and get all stuff about the token
+    MUST INCLUDE:
+        memoryStatus
+        notes
+    
+    if the token does not exist, a new entry in the database will be made
+    */
+    getAllTokenInfo(tokenText)
+    {
+        logger.log('LangManager_zh_HK.getAllTokenInfo', 'LangManager ' + LangId.zh_HK + ' getting info for ' + tokenText, LogType.msg);
+        db.assertLangExists(LangId.zh_HK);
+        let info = db.readTokenInfo(tokenText, LangId.zh_HK);
+        if (info)
+            return info;
+
+        
+        logger.log('LangManager_zh_HK.getAllTokenInfo', 'db has no entry for ' + tokenText + ', adding new entry', LogType.msg);
+        info = generateDefaultTokenInfo();
+
+        // add extra info tags
+        info['jyutping'] = LangManager_zh_HK.__getCantoJyutping(tokenText);
+
+        db.writeTokenInfo(tokenText, LangId.zh_HK, info);
+        return info;
+    }
+
+    static async __getCharDefFromWeb(tokenText)
+    {
+        return 'none yet';
+        /*
+        let x = encodeURI(`https://chinese.yabla.com/chinese-english-pinyin-dictionary.php?define=${tokenText}`);
+        console.log(x);
+        let dictDoc = await fetchHTML(x);
+        if (!dictDoc)
+            return null;
+
+        const eles = dictDoc.getElementsByClassName("meaning");
+        if (!eles || eles.length == 0)
+        return null;
+    console.log(eles);
+    return eles[0].innerText;
+    */
+    }
+
+    static async __fillOnClickAttributes(tokenText, currentInfo)
+    {
+        let writeToDb = false;
+        if (!currentInfo['def'])
+        {
+            writeToDb = true;
+            currentInfo['def'] = await LangManager_zh_HK.__getCharDefFromWeb(tokenText);
+        }
+
+        if (writeToDb)
+        {
+            db.writeTokenInfo(tokenText, LangId.zh_HK, currentInfo);
+        }
+
+        return currentInfo;
+    }
+
+    async createExtraTooltipHTML(tokenText)
+    {
+        let info = this.getAllTokenInfo(tokenText);
+        info = await LangManager_zh_HK.__fillOnClickAttributes(tokenText, info);
+
+        return `
+        <div>
+            <p>Jyutping: ${info['jyutping']}</p>
+            <p>Definition: ${info['def']}</p>
+        </div>
+        `;
+    }
+
+    saveInfoFromTooltip(tokenText, standardInfo, extraHTML)
+    {
+        const prevInfo = this.getAllTokenInfo(tokenText);
+        prevInfo['memoryStatus'] = standardInfo['memoryStatus'];
+        prevInfo['notes'] = standardInfo['notes'];
+        db.writeTokenInfo(tokenText, LangId.zh_HK, prevInfo);
     }
 }
 
@@ -191536,6 +191676,7 @@ const logger = new Logger();
 const db = new DataBase();
 const createdLangManagers = {};
 const tooltipState = new TooltipState();
+const cnRe = /[\u4E00-\u9FCC\u3400-\u4DB5\uFA0E\uFA0F\uFA11\uFA13\uFA14\uFA1F\uFA21\uFA23\uFA24\uFA27-\uFA29]|[\ud840-\ud868][\udc00-\udfff]|\ud869[\udc00-\uded6\udf00-\udfff]|[\ud86a-\ud86c][\udc00-\udfff]|\ud86d[\udc00-\udf34\udf40-\udfff]|\ud86e[\udc00-\udc1d]/gm
 
 /////////////////
 //  LISTENERS  //
@@ -191800,6 +191941,9 @@ function getLangManager(langId)
             break;
         case LangId.zh_CN:
             manager = new LangManager_zh_CN();
+            break;
+        case LangId.zh_HK:
+            manager = new LangManager_zh_HK();
             break;
         default:
             return null;
