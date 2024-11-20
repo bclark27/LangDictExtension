@@ -191587,6 +191587,35 @@ document.body.addEventListener("click", onBodyClicked);
 /////////////
 //  FUNCS  //
 /////////////
+
+function existsBinarySearch(arr, x)
+{
+    if (!arr || arr.length == 0)
+        return false;
+
+    let start = 0, end = arr.length - 1;
+
+    // Iterate while start not meets end
+    while (start <= end) {
+
+        // Find the mid index
+        let mid = Math.floor((start + end) / 2);
+
+        // If element is present at 
+        // mid, return True
+        if (arr[mid] == x) return true;
+
+        // Else look in left or 
+        // right half accordingly
+        else if (arr[mid] < x)
+            start = mid + 1;
+        else
+            end = mid - 1;
+    }
+
+    return false;
+}
+
 function parseCnSentanceIntoWords(cnText, cnDict)
 {
     // start from the right, and search for the longest matches
@@ -191596,26 +191625,18 @@ function parseCnSentanceIntoWords(cnText, cnDict)
     for (let i = 0; i < cnText.length;)
     {
         let thisMatch = "";
-        let matchFound = false;
         for (let matchLen = dictLen; matchLen >= 1; matchLen--)
         {
             if (remainingText.length < matchLen)
                 continue;
 
             const thisDict = cnDict[matchLen];
-
-            for (const thisDictEntry of thisDict)
+            const thisRemaining = remainingText.substring(0,matchLen);
+            if (existsBinarySearch(thisDict, thisRemaining))
             {
-                if (remainingText.startsWith(thisDictEntry))
-                {
-                    thisMatch = thisDictEntry;
-                    matchFound = true;
-                    break;
-                }
-            }
-
-            if (matchFound)
+                thisMatch = thisRemaining;
                 break;
+            }
         }
 
         if (thisMatch == "")
