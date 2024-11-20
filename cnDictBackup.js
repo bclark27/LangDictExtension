@@ -1,5 +1,7 @@
 
-// MANDARIN
+////////////////
+//  MANDARIN  //
+////////////////
 
 const CHINESE_TRAD_TO_SIMPLE = {
     "臺":"台",
@@ -190861,4 +190863,3 @@ const CANTO_JYUTPING = {
     "齵":"jyu4",
     "龔":"gung1",
 }
-    
