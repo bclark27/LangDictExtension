@@ -17,6 +17,7 @@
     padding: 10px;
     min-width: 300px;
     max-width: 500px;
+    font-size: 18px;
 }
 
 #lang-parser-tooltip-header {
