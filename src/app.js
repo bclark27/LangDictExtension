@@ -191272,7 +191272,7 @@ class LangManager_zh_CN extends LangManager
     {
         let info = this.getAllTokenInfo(tokenText);
         info = await LangManager_zh_CN.__fillOnClickAttributes(tokenText, info);
-        const link = `https://en.dict.naver.com/#/search?query=${tokenText}`;
+        const link = `https://chinese.yabla.com/chinese-english-pinyin-dictionary.php?define=${tokenText}`;
 
         return `
         <div>
