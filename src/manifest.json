@@ -30,6 +30,7 @@
         "*://chinese.yabla.com/*",
         "*://cantonese.org/*",
         "*://en.dict.naver.com/*",
+        "*://collinsdictionary.com/*",
         "clipboardWrite"
     ],
     "browser_action": {
