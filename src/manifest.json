@@ -31,6 +31,7 @@
         "*://cantonese.org/*",
         "*://en.dict.naver.com/*",
         "*://collinsdictionary.com/*",
+        "*://en.openrussian.org/*",
         "clipboardWrite"
     ],
     "browser_action": {
