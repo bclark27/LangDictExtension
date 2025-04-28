@@ -1,0 +1,13 @@
+[[item]]
+pattern    = "*.js"
+start      = "// Start Pack {path}"
+end        = "// End Pack {path}"
+in_place   = false
+output_dir = "dist"
+
+[[item]]
+pattern    = "*.py"
+start      = "# Start Pack {path}"
+end        = "# End Pack {path}"
+in_place   = false
+output_dir = "dist"

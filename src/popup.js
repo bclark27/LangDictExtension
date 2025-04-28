@@ -7,6 +7,7 @@ const TOOLTIP_ROOT_ID = "lang-parser-tooltip-root"
 const LANG_PARSER_TOKEN_ID = 'lang-parser-token';
 const PARSE_CLICKED_ATT = 'parse-clicked';
 const LOAD_CLICKED_ATT = 'load-clicked';
+const LOADED_DATA_ATT = 'loaded-data';
 const EXPORT_CLICKED_ATT = 'export-clicked';
 const LOCAL_STORAGE_SELECTED_LANG_ID = "selected-language";
 
@@ -24,6 +25,30 @@ parseButton.addEventListener('click', parseButtonClicked);
 
 const loadButton = document.getElementById("loadButton");
 loadButton.addEventListener('click', loadButtonClicked);
+
+const inputField = document.getElementById("inputField");
+inputField.addEventListener('change', (evt) => {
+  console.log('ASDASD');
+  const fileList = evt.target.files;      // FileList object :contentReference[oaicite:2]{index=2}
+  if (!fileList || fileList.length === 0) return;
+  
+  var file = fileList[0];
+
+    // setting up the reader
+    var reader = new FileReader();
+    reader.readAsText(file,'UTF-8');
+
+    // here we tell the reader what to do when it's done reading...
+    reader.onload = readerEvent => {
+      try {
+        const data = JSON.parse(readerEvent.target.result);
+        console.log(data);
+        sendMessageToActiveTab({[LOAD_CLICKED_ATT]: true, [LOADED_DATA_ATT]: data});
+      } catch (error) {
+        alert('Error loading vocabulary: ' + error);
+      }
+    }
+});
 
 const exportButton = document.getElementById("exportButton");
 exportButton.addEventListener('click', exportButtonClicked);
@@ -63,9 +88,39 @@ function parseButtonClicked()
     sendMessageToActiveTab({[PARSE_CLICKED_ATT]: true});
 }
 
+let input;
+
 function loadButtonClicked()
 {
-    sendMessageToActiveTab({[LOAD_CLICKED_ATT]: true});
+  input = document.createElement('input');
+  input.type = 'file';
+  console.log("HERE 0");
+  input.onchange = e => {
+    console.log("HERE 1");
+    // getting a hold of the file reference
+    var file = e.target.files[0];
+
+    // setting up the reader
+    var reader = new FileReader();
+    reader.readAsText(file,'UTF-8');
+
+    // here we tell the reader what to do when it's done reading...
+    reader.onload = readerEvent => {
+      try {
+        const data = JSON.parse(readerEvent.target.result);
+        console.log(data);
+        sendMessageToActiveTab({[LOAD_CLICKED_ATT]: true, [LOADED_DATA_ATT]: data});
+      } catch (error) {
+        alert('Error loading vocabulary: ' + error);
+      }
+    }
+  }
+
+  try {
+    input.click();
+  } catch (error) {
+    console.error("Error clicking input:", error);
+  }
 }
 
 function exportButtonClicked()
