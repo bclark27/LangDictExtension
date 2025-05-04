@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const saveButton = document.getElementById('save');
   const parseButton = document.getElementById('parse');
   const languageSelect = document.getElementById('language');
+  const knownButton = document.getElementById('mark_known');
+  const statsButton = document.getElementById('stats');
 
   loadButton.addEventListener('click', function() {
     // Load notes logic here
@@ -68,9 +70,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
   parseButton.addEventListener('click', function() {
     const selectedLanguage = languageSelect.value;
-    console.log("ASDASD: " + selectedLanguage );
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
       chrome.tabs.sendMessage(tabs[0].id, {message: "parse_notes", language: selectedLanguage});
+    });
+  });
+
+  knownButton.addEventListener('click', function() {
+    const selectedLanguage = languageSelect.value;
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      chrome.tabs.sendMessage(tabs[0].id, {message: "mark_known", language: selectedLanguage});
+    });
+  });
+
+  statsButton.addEventListener('click', function() {
+    const selectedLanguage = languageSelect.value;
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      chrome.tabs.sendMessage(tabs[0].id, {message: "get_stats", language: selectedLanguage}, function(response){
+        console.log(response);
+      });
     });
   });
 });

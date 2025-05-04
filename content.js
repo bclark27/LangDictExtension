@@ -9,6 +9,7 @@ const LangId = Object.freeze({
   None:       "None",
   zh_CN:      "zh_CN",
   zh_HK:      "zh_HK",
+  kr:         "kr",
 });
 
 
@@ -143,6 +144,14 @@ class DataBase
     this.dbObj = newDb;
     updateAllTokenHTML(null, null, null);
   }
+
+  readAllLangData(langId)
+  {
+    this.assertLangExists(langId);
+    const tokens = this.dbObj["tokens"];
+    const thisLangIdTokens = tokens[langId];
+    return thisLangIdTokens;
+  }
 }
 const db = new DataBase();
 
@@ -171,6 +180,106 @@ class LangManager
     createTooltipHTML(langToken)
     {
         throw new Error("Not Implomented");
+    }
+}
+
+class LangManager_kr extends LangManager
+{
+    tokenizeText(text)
+    {
+      console.log("Tokenizing... " + text);
+      let [textChunks, chunksAreMatchs] = chunkTextByRegex(text, krRe);
+      let tokens = [];
+      for (let i = 0; i < textChunks.length; i++)
+      {
+        // if this token is not kr, pass the whole thing as not target lang
+        if (!chunksAreMatchs[i])
+        {
+          tokens.push(new LangToken(textChunks[i], LangId.None));
+        }
+        else
+        {
+          tokens.push(new LangToken(textChunks[i], LangId.kr));
+        }
+
+      }
+      return tokens;
+    }
+
+    textContainsTargetLang(text)
+    {
+        return text != null && krRe.test(text);
+    }
+
+    getBasicTokenInfo(langToken)
+    {
+      if (langToken.langId != LangId.kr)
+      {
+        console.log('LangManager_kr.getBasicTokenInfo: tried to get token info for token of different lang id: (' + langToken.token + ", " + langToken.langId + ")");
+        return null;
+      }
+
+      console.log('LangManager_kr.getBasicTokenInfo:' + 'LangManager ' + LangId.kr + ' getting info for ' + langToken.token);
+      let info = db.readTokenInfo(langToken.token, LangId.kr);
+      if (info)
+        return info;
+
+      console.log('LangManager_kr.getBasicTokenInfo:' +'db has no entry for ' + langToken.token + ', adding new entry');
+      info = {
+        [MEMORY_STATUS]: 0,
+        'notes': '',
+      };
+
+      db.writeTokenInfo(langToken.token, LangId.kr, info);
+      return info;
+    }
+
+    createTooltipHTML(langToken)
+    {
+      const info = this.getBasicTokenInfo(langToken);
+      const link = `https://korean.dict.naver.com/koendict/#/search?query=${langToken.token}&range=word`;
+      
+      const mainDiv = document.createElement('div');
+      const tokenTextArea = document.createElement('p');
+      const linkArea = document.createElement('a');
+      const notesArea = document.createElement('input');
+      const dropdown = document.createElement("select");
+      const saveButton = document.createElement('button');
+
+      mainDiv.appendChild(tokenTextArea);
+      mainDiv.appendChild(linkArea);
+      mainDiv.appendChild(document.createElement('br'));
+      mainDiv.appendChild(notesArea);
+      mainDiv.appendChild(document.createElement('br'));
+      mainDiv.appendChild(dropdown);
+      mainDiv.appendChild(document.createElement('br'));
+      mainDiv.appendChild(saveButton);
+      
+      tokenTextArea.innerText = langToken.token;
+      linkArea.href = link;
+      linkArea.innerText = langToken.token;
+      linkArea.target = '_blank';
+      notesArea.value = info['notes'];
+      
+      for (var i = 0; i < 5; i++)
+      {
+        const option = document.createElement("option");
+        option.value = i;
+        option.textContent = i.toString();
+        option.selected = i == info[MEMORY_STATUS];
+        dropdown.appendChild(option);
+      }
+
+      saveButton.textContent = 'Save';
+      saveButton.addEventListener('click', () => {
+
+        info[MEMORY_STATUS] = dropdown.selectedIndex;
+        info['notes'] = notesArea.value;
+        db.writeTokenInfo(langToken.token, LangId.kr, info);
+        updateAllTokenHTML(null, langToken.langId, langToken.token);
+      });
+
+      return mainDiv;
     }
 }
 
@@ -693,6 +802,9 @@ function getLangManager(langId)
         case LangId.zh_HK:
             manager = new LangManager_zh_HK();
             break;
+        case LangId.kr:
+            manager = new LangManager_kr();
+            break;
         default:
             return null;
     }
@@ -796,6 +908,16 @@ chrome.runtime.onMessage.addListener(
             const language = request.language;
             console.log(language);
             mainParse(null, language);
+        } else if (request.message === "mark_known") {
+            // Handle parsing notes
+            const language = request.language;
+            markAllKnown(null, language);
+        } else if (request.message === "get_stats") {
+            // Handle parsing notes
+            const language = request.language;
+            const stats = getStats(null, language);
+            console.log(stats);
+            sendResponse({stats: stats});
         }
     }
 );
@@ -857,4 +979,117 @@ function mainParse(root, langId) {
 
     updateAllTokenHTML(spanGroup);
   }
+}
+
+function markAllKnown(root, langId)
+{
+    if (!root)
+        root = document.body;
+    
+    // get the correct langManager
+    const langManager = getLangManager(langId);
+
+    if (langManager == null)
+    {
+        console.log("unsupported language " + langId);
+        return;
+    }
+
+    const existingLangNodes = getAllExistingLangHtml(root);
+    for (const existingLangNode of existingLangNodes)
+    {
+        const thisToken = LangToken.htmlElementToToken(existingLangNode);
+        if (!thisToken)
+            continue;
+        
+        if (thisToken.langId != langId)
+            continue;
+
+        const tokenInfo = db.readTokenInfo(thisToken.token, langId);
+        if (!tokenInfo)
+            continue;
+
+        if (tokenInfo[MEMORY_STATUS] != 0)
+            continue;
+
+        tokenInfo[MEMORY_STATUS] = 4;
+        db.writeTokenInfo(thisToken.token, langId, tokenInfo);
+    }
+
+    updateAllTokenHTML(root, langId, null);
+}
+
+function getStats(root, langId)
+{
+    if (!root)
+        root = document.body;
+    
+    // get the correct langManager
+    const langManager = getLangManager(langId);
+
+    if (langManager == null)
+    {
+        console.log("unsupported language " + langId);
+        return {};
+    }
+
+    const fullLangStats = {
+        0: 0,
+        1: 0,
+        2: 0,
+        3: 0,
+        4: 0
+    };
+
+    const allTokens = db.readAllLangData(langId);
+    for (const tokenText in allTokens)
+    {
+        const data = allTokens[tokenText];
+        const mem = data[MEMORY_STATUS];
+        if (!mem)
+            continue;
+
+        fullLangStats[mem] += 1;
+    }
+
+    const pageStats = {
+        0: 0,
+        1: 0,
+        2: 0,
+        3: 0,
+        4: 0
+    };
+
+    // take out the existing nodes and try to update them
+    const existingLangNodes = getAllExistingLangHtml(root);
+    const seenTokens = {};
+    for (const existingLangNode of existingLangNodes)
+    {
+        const thisToken = LangToken.htmlElementToToken(existingLangNode);
+        if (!thisToken)
+            continue;
+        
+        console.log(thisToken);
+        if (thisToken.langId != langId)
+            continue;
+
+        if (thisToken.token in seenTokens)
+            continue;
+        seenTokens[thisToken.token] = 0;
+
+        const data = db.readTokenInfo(thisToken.token, langId);
+        if (!data)
+            continue;
+
+        const mem = data[MEMORY_STATUS];
+        if (!mem)
+            continue;
+
+        pageStats[mem] += 1;
+    }
+
+    return {
+        full: fullLangStats,
+        page: pageStats
+    }
 }
