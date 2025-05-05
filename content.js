@@ -10,6 +10,7 @@ const LangId = Object.freeze({
   zh_CN:      "zh_CN",
   zh_HK:      "zh_HK",
   kr:         "kr",
+  de:         "de",
 });
 
 
@@ -20,6 +21,7 @@ const LANG_PARSER_TOKEN_ID = 'lang-parser-token';
 const LANG_PARSER_TOKEN_LANGUAGE = 'lang-parser-token-lang';
 const cnRe = /[\u4E00-\u9FCC\u3400-\u4DB5\uFA0E\uFA0F\uFA11\uFA13\uFA14\uFA1F\uFA21\uFA23\uFA24\uFA27-\uFA29]|[\ud840-\ud868][\udc00-\udfff]|\ud869[\udc00-\uded6\udf00-\udfff]|[\ud86a-\ud86c][\udc00-\udfff]|\ud86d[\udc00-\udf34\udf40-\udfff]|\ud86e[\udc00-\udc1d]/gm
 const krRe = /[\uac00-\ud7af]|[\u1100-\u11ff]|[\u3130-\u318f]|[\ua960-\ua97f]|[\ud7b0-\ud7ff]/gm
+const deRe = /[a-zA-ZßüÜöÖäÄ]/gm
 const createdLangManagers = {};
 
 /*
@@ -281,6 +283,119 @@ class LangManager_kr extends LangManager
 
       return mainDiv;
     }
+}
+
+class LangManager_GeneralSpacedLangParser extends LangManager
+{
+  linkTemplate = "";
+  langRegex = /.*/gm;
+  useLowerCase = false;
+
+  constructor(langId, linkTemplate, langRegex, useLowerCase)
+  {
+      super(langId);
+      this.linkTemplate = linkTemplate;
+      this.langRegex = langRegex;
+      this.useLowerCase = useLowerCase;
+  }
+
+  tokenizeText(text)
+  {
+    text = text.replace(/\u00AD/g, '');
+    console.log("Tokenizing... " + text);
+    const [textChunks, chunksAreMatchs] = chunkTextByRegex(text, this.langRegex);
+    let tokens = [];
+    for (let i = 0; i < textChunks.length; i++)
+    {
+      // if this token is not kr, pass the whole thing as not target lang
+      if (!chunksAreMatchs[i])
+      {
+        tokens.push(new LangToken(textChunks[i], LangId.None));
+      }
+      else
+      {
+        tokens.push(new LangToken(textChunks[i].toLowerCase(), this.langId));
+      }
+
+    }
+    return tokens;
+  }
+
+  textContainsTargetLang(text)
+  {
+      return text != null && this.langRegex.test(text);
+  }
+
+  getBasicTokenInfo(langToken)
+  {
+    if (langToken.langId != this.langId)
+    {
+      console.log('LangManager_.getBasicTokenInfo: tried to get token info for token of different lang id: (' + langToken.token + ", " + langToken.langId + ")");
+      return null;
+    }
+
+    console.log('LangManager_.getBasicTokenInfo:' + 'LangManager ' + this.langId + ' getting info for ' + langToken.token);
+    let info = db.readTokenInfo(langToken.token, this.langId);
+    if (info)
+      return info;
+
+    console.log('LangManager_.getBasicTokenInfo:' +'db has no entry for ' + langToken.token + ', adding new entry');
+    info = {
+      [MEMORY_STATUS]: 0,
+      'notes': '',
+    };
+
+    db.writeTokenInfo(langToken.token, this.langId, info);
+    return info;
+  }
+
+  createTooltipHTML(langToken)
+  {
+    const info = this.getBasicTokenInfo(langToken);
+    const link = formatString(this.linkTemplate, langToken.token);
+    
+    const mainDiv = document.createElement('div');
+    const tokenTextArea = document.createElement('p');
+    const linkArea = document.createElement('a');
+    const notesArea = document.createElement('input');
+    const dropdown = document.createElement("select");
+    const saveButton = document.createElement('button');
+
+    mainDiv.appendChild(tokenTextArea);
+    mainDiv.appendChild(linkArea);
+    mainDiv.appendChild(document.createElement('br'));
+    mainDiv.appendChild(notesArea);
+    mainDiv.appendChild(document.createElement('br'));
+    mainDiv.appendChild(dropdown);
+    mainDiv.appendChild(document.createElement('br'));
+    mainDiv.appendChild(saveButton);
+    
+    tokenTextArea.innerText = langToken.token;
+    linkArea.href = link;
+    linkArea.innerText = langToken.token;
+    linkArea.target = '_blank';
+    notesArea.value = info['notes'];
+    
+    for (var i = 0; i < 5; i++)
+    {
+      const option = document.createElement("option");
+      option.value = i;
+      option.textContent = i.toString();
+      option.selected = i == info[MEMORY_STATUS];
+      dropdown.appendChild(option);
+    }
+
+    saveButton.textContent = 'Save';
+    saveButton.addEventListener('click', () => {
+
+      info[MEMORY_STATUS] = dropdown.selectedIndex;
+      info['notes'] = notesArea.value;
+      db.writeTokenInfo(langToken.token, this.langId, info);
+      updateAllTokenHTML(null, langToken.langId, langToken.token);
+    });
+
+    return mainDiv;
+  }
 }
 
 class LangManager_zh_HK extends LangManager
@@ -787,6 +902,14 @@ function chunkTextByRegex(text, re)
     return [chunks, chunksAreMatchs];
 }
 
+function formatString(template, ...values) {
+  return template.replace(/\{(\d+)\}/g, (match, index) => {
+    return typeof values[index] !== 'undefined'
+      ? values[index]
+      : match;
+  });
+}
+
 function getLangManager(langId)
 {
     let manager = createdLangManagers[langId];
@@ -796,17 +919,20 @@ function getLangManager(langId)
 
     switch (langId)
     {
-        case LangId.zh_CN:
-            manager = new LangManager_zh_CN();
-            break;
-        case LangId.zh_HK:
-            manager = new LangManager_zh_HK();
-            break;
-        case LangId.kr:
-            manager = new LangManager_kr();
-            break;
-        default:
-            return null;
+      case LangId.zh_CN:
+        manager = new LangManager_zh_CN();
+        break;
+      case LangId.zh_HK:
+        manager = new LangManager_zh_HK();
+        break;
+      case LangId.kr:
+        manager = new LangManager_GeneralSpacedLangParser(LangId.kr, "https://korean.dict.naver.com/koendict/#/search?query={0}&range=word", krRe, false);
+        break;
+      case LangId.de:
+        manager = new LangManager_GeneralSpacedLangParser(LangId.de, "https://m.dict.cc/deutsch-englisch/{0}.html", deRe, true);
+        break;
+      default:
+        return null;
     }
 
     createdLangManagers[langId] = manager;
@@ -1040,15 +1166,11 @@ function getStats(root, langId)
         3: 0,
         4: 0
     };
-
     const allTokens = db.readAllLangData(langId);
     for (const tokenText in allTokens)
     {
         const data = allTokens[tokenText];
         const mem = data[MEMORY_STATUS];
-        if (!mem)
-            continue;
-
         fullLangStats[mem] += 1;
     }
 
@@ -1069,7 +1191,6 @@ function getStats(root, langId)
         if (!thisToken)
             continue;
         
-        console.log(thisToken);
         if (thisToken.langId != langId)
             continue;
 
@@ -1082,9 +1203,6 @@ function getStats(root, langId)
             continue;
 
         const mem = data[MEMORY_STATUS];
-        if (!mem)
-            continue;
-
         pageStats[mem] += 1;
     }
 

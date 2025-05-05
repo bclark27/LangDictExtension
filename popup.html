@@ -4,8 +4,96 @@
   <title>Language Learning Extension</title>
   <style>
     body {
-      width: 200px;
+      width: 300px;
+      height: 300px;
     }
+
+    /* Style for the overlay */
+    .popup-overlay {
+      position: fixed; /* Stay in place */
+      z-index: 1000;  /* Sit on top */
+      left: 0;
+      top: 0;
+      width: 100%; /* Full width */
+      height: 100%; /* Full height */
+      overflow: auto; /* Enable scroll if needed */
+      background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
+      display: flex; /* Use flexbox for centering */
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Style for the popup content box */
+    .popup-content {
+      background-color: #fefefe;
+      margin: auto; /* Centered */
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 500px; /* Max width */
+      border-radius: 8px;
+      position: relative; /* Needed for positioning the close button */
+      box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+    }
+
+    /* Style for the close button */
+    .popup-close {
+      color: #aaa;
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .popup-close:hover,
+    .popup-close:focus {
+      color: black;
+      text-decoration: none;
+    }
+
+    /* Styling within the popup */
+    .stats-section {
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #eee;
+    }
+    .stats-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .stats-section h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .stats-list {
+      list-style: none;
+      padding-left: 0;
+      margin: 0;
+    }
+
+    .stats-list li {
+      margin-bottom: 5px;
+      color: #555;
+    }
+
+    .stats-list li strong {
+        display: inline-block;
+        width: 100px; /* Adjust as needed for alignment */
+        color: #000;
+    }
+
+    .stats-total {
+        margin-top: 10px;
+        font-weight: bold;
+        color: #000;
+    }
+    
   </style>
 </head>
 <body>
@@ -15,13 +103,30 @@
     <option value="zh_CN">Mandarin</option>
     <option value="zh_HK">Cantonese</option>
     <option value="kr">Korean</option>
+    <option value="de">German</option>
   </select>
   <br><br>
   <button id="load">Load Notes</button>
   <button id="save">Save Notes</button>
   <button id="parse">Parse</button>
   <button id="mark_known">Mark All Known</button>
-  <button id="stats">Stats</button>
   <script src="popup.js"></script>
+        
+  <!-- The Stats Button (You likely already have this) -->
+  <button id="statsButton">Show Stats</button>
+
+  <!-- The Popup Structure (Initially Hidden) -->
+  <div id="statsPopup" class="popup-overlay" style="display: none;">
+    <div class="popup-content">
+      <span class="popup-close" onclick="closeStatsPopup()">×</span>
+      <h2>Progress Statistics</h2>
+      <div id="statsDataContainer">
+        <!-- Stats data will be loaded here by JavaScript -->
+        Loading stats...
+      </div>
+    </div>
+  </div>
+
+    
 </body>
 </html>
