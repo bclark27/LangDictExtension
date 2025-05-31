@@ -14,7 +14,7 @@ const LangId = Object.freeze({
   jp:         "jp",
 });
 
-
+var currLangId = LangId.None;
 const TOOLTIP_POPUP_ID = "lang-parser-tooltip-popup"
 const TOOLTIP_ROOT_ID = "lang-parser-tooltip-root"
 const MEMORY_STATUS = "memory-status"
@@ -25,6 +25,45 @@ const krRe = /[\uac00-\ud7af]|[\u1100-\u11ff]|[\u3130-\u318f]|[\ua960-\ua97f]|[\
 const deRe = /[a-zA-ZßüÜöÖäÄ]/gm
 const jpRe = /[\u3040-\u309f]|[\u30a0-\u30ff]|[\uff00-\uff9f]|[\u4e00-\u9faf]|[\u3400-\u4dbf]/gm
 const createdLangManagers = {};
+
+class YTCaptionsObserver
+{
+    constructor()
+    {
+        this.observer = null;
+    }
+
+    static __getYTCaptionContainer()
+    {
+        const eles = document.getElementsByClassName("ytp-caption-window-container");
+        if (!eles || eles.length == 0)
+            return null;
+        return eles[0];
+    }
+
+    addCaptionsObserver()
+    {
+        if (this.observer != null)
+        {
+            this.observer.disconnect();
+            this.observer = null;
+        }
+        
+        const ytCaptionsContainer = YTCaptionsObserver.__getYTCaptionContainer();
+        if (ytCaptionsContainer == null)
+            return;
+
+        this.observer = new window.MutationObserver(this.__onCaptionsUpdated);
+        this.observer.observe(ytCaptionsContainer, {childList: true, subtree: false});
+    }
+
+    __onCaptionsUpdated(e)
+    {
+        const ytCaptionsContainer = YTCaptionsObserver.__getYTCaptionContainer();
+        mainParse(ytCaptionsContainer, currLangId);
+    }
+}
+const ytcc = new YTCaptionsObserver();
 
 /*
     LangToken is ment to hold very minimal information about the target lang words
@@ -1451,6 +1490,9 @@ function createSpanGroupFromTokens(tokens)
 function mainParse(root, langId) {
   if (!root)
     root = document.body;
+
+  currLangId = langId;
+  ytcc.addCaptionsObserver();
 
   // get the correct langManager
   const langManager = getLangManager(langId);
