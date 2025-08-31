@@ -140,6 +140,7 @@ def main():
         format="%(levelname)s: %(message)s"
     )
 
+
     rules, in_place, out_dir = load_config(args.config)
     target = args.target_dir.resolve()
     if not in_place:

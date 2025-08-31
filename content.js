@@ -12,6 +12,8 @@ const LangId = Object.freeze({
   kr:         "kr",
   de:         "de",
   jp:         "jp",
+  he:         "he",
+  ru:         "ru",
 });
 
 var currLangId = LangId.None;
@@ -23,6 +25,8 @@ const LANG_PARSER_TOKEN_LANGUAGE = 'lang-parser-token-lang';
 const cnRe = /[\u4E00-\u9FCC\u3400-\u4DB5\uFA0E\uFA0F\uFA11\uFA13\uFA14\uFA1F\uFA21\uFA23\uFA24\uFA27-\uFA29]|[\ud840-\ud868][\udc00-\udfff]|\ud869[\udc00-\uded6\udf00-\udfff]|[\ud86a-\ud86c][\udc00-\udfff]|\ud86d[\udc00-\udf34\udf40-\udfff]|\ud86e[\udc00-\udc1d]/gm
 const krRe = /[\uac00-\ud7af]|[\u1100-\u11ff]|[\u3130-\u318f]|[\ua960-\ua97f]|[\ud7b0-\ud7ff]/gm
 const deRe = /[a-zA-ZßüÜöÖäÄ]/gm
+const heRe = /[\u0590-\u05fe]/gm
+const ruRe = /[\u0400-\u04ff]/gm
 const jpRe = /[\u3040-\u309f]|[\u30a0-\u30ff]|[\uff00-\uff9f]|[\u4e00-\u9faf]|[\u3400-\u4dbf]/gm
 const createdLangManagers = {};
 
@@ -1356,8 +1360,14 @@ function getLangManager(langId)
       case LangId.kr:
         manager = new LangManager_GeneralSpacedLangParser(LangId.kr, "https://korean.dict.naver.com/koendict/#/search?query={0}&range=word", krRe, false);
         break;
+      case LangId.ru:
+        manager = new LangManager_GeneralSpacedLangParser(LangId.ru, "https://dictionary.reverso.net/russian-english/{0}", ruRe, true);
+        break;
       case LangId.de:
         manager = new LangManager_GeneralSpacedLangParser(LangId.de, "https://m.dict.cc/deutsch-englisch/{0}.html", deRe, true);
+        break;
+      case LangId.he:
+        manager = new LangManager_GeneralSpacedLangParser(LangId.he, "https://www.morfix.co.il/en/{0}", heRe, true);
         break;
       default:
         return null;
